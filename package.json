@@ -1,0 +1,29 @@
+{
+  "name": "screenparty-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ScreenParty - Plataforma de compartilhamento de tela e áudio em tempo real para amigos",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces",
+    "dev:server": "npm run dev -w @screenparty/server",
+    "dev:web": "npm run dev -w @screenparty/web",
+    "build": "npm run build --workspaces",
+    "build:server": "npm run build -w @screenparty/server",
+    "build:web": "npm run build -w @screenparty/web",
+    "test": "npm run test --workspaces",
+    "typecheck": "npm run typecheck --workspaces"
+  },
+  "keywords": [
+    "screenparty",
+    "livekit",
+    "webrtc",
+    "react",
+    "screen-sharing"
+  ],
+  "author": "ScreenParty Team",
+  "license": "MIT"
+}
+

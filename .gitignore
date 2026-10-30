@@ -1,0 +1,24 @@
+# Logs e temporários
+node_modules/
+dist/
+dist-ssr/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Variáveis de ambiente
+.env
+.env.*.local
+!.env.example
+
+# IDEs e SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# LiveKit data
+livekit.yaml
+
