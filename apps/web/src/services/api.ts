@@ -24,6 +24,12 @@ export interface CreateRoomResponse {
   hasPasscode: boolean;
 }
 
+export interface ApiError extends Error {
+  status?: number;
+  code?: string;
+  requiresAuth?: boolean;
+}
+
 /**
  * Resolve a URL base da API de acordo com o ambiente.
  * Em produção, NUNCA recorre silenciosamente ao localhost: exige a variável VITE_API_URL.
@@ -67,10 +73,18 @@ export async function createRoomApi(params: CreateRoomRequest): Promise<CreateRo
       body: JSON.stringify(params),
     });
 
-    const data = await response.json();
+    let data: { error?: string; code?: string; roomName?: string; inviteKey?: string; hasPasscode?: boolean } = {};
+    try {
+      data = await response.json();
+    } catch {
+      data = {};
+    }
 
     if (!response.ok) {
-      throw new Error(data.error || `Erro ${response.status}: Falha ao registrar a sala.`);
+      const err: ApiError = new Error(data.error || `Erro ${response.status}: Falha ao registrar a sala.`);
+      err.status = response.status;
+      err.code = data.code;
+      throw err;
     }
 
     return data as CreateRoomResponse;
@@ -95,17 +109,21 @@ export async function requestRoomToken(params: TokenRequest): Promise<TokenRespo
       body: JSON.stringify(params),
     });
 
-    const data = await response.json();
+    let data: { error?: string; code?: string; requiresAuth?: boolean } & Partial<TokenResponse> = {};
+    try {
+      data = await response.json();
+    } catch {
+      data = {};
+    }
 
     if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
-        const error = new Error(
-          data.error || 'Acesso não autorizado à sala. Chave de convite ou senha incorreta.'
-        );
-        (error as { status?: number }).status = response.status;
-        throw error;
-      }
-      throw new Error(data.error || `Erro ${response.status}: Falha ao solicitar acesso à sala.`);
+      const error: ApiError = new Error(
+        data.error || `Erro ${response.status}: Falha ao solicitar acesso à sala.`
+      );
+      error.status = response.status;
+      error.code = data.code;
+      error.requiresAuth = !!data.requiresAuth;
+      throw error;
     }
 
     return data as TokenResponse;

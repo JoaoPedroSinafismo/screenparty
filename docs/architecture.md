@@ -70,3 +70,17 @@ Na versão **V0.3**, a arquitetura foi estendida para suportar operação em nuv
 - **Fila Sequencial**: Encadeamento determinístico de `Promise` para garantir que `room.connect()` e `room.disconnect()` nunca ocorram concorrentemente.
 - **Isolamento de Callbacks**: Callbacks como `onDisconnected` e funções de atualização de interface são consumidos via `useRef`, eliminando re-execuções espúrias do `useEffect` causadas por re-renderizações de componentes pais.
 - **Resiliência a StrictMode**: Suporte nativo ao ciclo duplo de montagem do React 18 sem provocar colisão de identificador (`DUPLICATE_IDENTITY`).
+
+---
+
+## 4. Modelo de Segurança e Autenticação de Salas (V0.3)
+
+### 4.1. Classificação e Ciclo de Vida das Salas
+- **Salas Públicas (`hasPasscode: false`)**: Registradas explicitamente via `POST /api/room/create` sem senha. Qualquer usuário com o código ou link da sala pode conectar imediatamente sem preencher senhas.
+- **Salas Protegidas (`hasPasscode: true`)**: Registradas com senha. Acesso permitido apenas mediante envio da senha correta ou uso do link com chave de convite oficial (`?key=...`).
+- **Salas Inexistentes / Expiradas**: Não são tratadas como salas públicas. O backend retorna HTTP 404 (`ROOM_NOT_FOUND`, `requiresAuth: false`) e a interface exibe erro explicativo, sem abrir formulário de senha.
+
+### 4.2. Chaves de Convite HMAC Determinísticas
+- Baseadas em HMAC-SHA256(`LIVEKIT_API_SECRET`, `"room-auth-v1:" + roomName`).
+- São *stateless*: links compartilhados com amigos permanecem válidos mesmo após reinícios do contêiner gratuito no Render.
+- Proteção contra Sobrescrita: Uma sala ativa não pode ser sobrescrita por terceiros para alterar senhas ou torná-la pública sem autorização (`HTTP 409 Conflict`).

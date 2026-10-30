@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { createParticipantToken } from '../services/tokenService.js';
-import { registerRoom, verifyRoomAccess, generateRoomInviteKey } from '../services/roomAuthService.js';
+import { registerRoom, verifyRoomAccess } from '../services/roomAuthService.js';
 
 export const tokenRouter = Router();
 
@@ -41,7 +41,6 @@ const tokenRequestSchema = z.object({
   passcode: z
     .string()
     .trim()
-    .min(1, 'A chave de autorização ou senha é obrigatória.')
     .max(64, 'Código de acesso excede o tamanho permitido.')
     .optional(),
 });
@@ -53,17 +52,29 @@ tokenRouter.post('/room/create', async (req: Request, res: Response): Promise<vo
 
     if (!parseResult.success) {
       const errorMsg = parseResult.error.issues.map((i) => i.message).join(' ');
-      res.status(400).json({ error: errorMsg });
+      res.status(400).json({ error: errorMsg, code: 'VALIDATION_ERROR' });
       return;
     }
 
     const { roomName, passcode } = parseResult.data;
     const roomInfo = registerRoom(roomName, passcode);
 
-    res.status(200).json(roomInfo);
+    if (!roomInfo.success) {
+      res.status(roomInfo.conflict ? 409 : 400).json({
+        error: roomInfo.reason || 'Não foi possível registrar a sala.',
+        code: roomInfo.conflict ? 'ROOM_CONFLICT' : 'REGISTRATION_FAILED',
+      });
+      return;
+    }
+
+    res.status(200).json({
+      roomName: roomInfo.roomName,
+      inviteKey: roomInfo.inviteKey,
+      hasPasscode: roomInfo.hasPasscode,
+    });
   } catch (error) {
     console.error('Erro ao registrar sala:', error instanceof Error ? error.message : error);
-    res.status(500).json({ error: 'Falha interna ao registrar a sala.' });
+    res.status(500).json({ error: 'Falha interna ao registrar a sala.', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -74,18 +85,19 @@ tokenRouter.post('/token', async (req: Request, res: Response): Promise<void> =>
 
     if (!parseResult.success) {
       const errorMsg = parseResult.error.issues.map((i) => i.message).join(' ');
-      res.status(400).json({ error: errorMsg });
+      res.status(400).json({ error: errorMsg, code: 'VALIDATION_ERROR' });
       return;
     }
 
     const { roomName, identity, name, passcode } = parseResult.data;
 
-    // Verificação rigorosa de autorização: nenhuma sala é acessível sem chave de convite ou senha
+    // Verificação de autorização e existência da sala
     const authCheck = verifyRoomAccess(roomName, passcode);
     if (!authCheck.authorized) {
-      res.status(401).json({
-        error: authCheck.reason || 'Acesso não autorizado à sala. Chave de convite ou senha necessária.',
-        requiresAuth: true,
+      res.status(authCheck.status).json({
+        error: authCheck.reason,
+        code: authCheck.code,
+        requiresAuth: authCheck.requiresAuth,
       });
       return;
     }
@@ -101,6 +113,7 @@ tokenRouter.post('/token', async (req: Request, res: Response): Promise<void> =>
     console.error('Erro interno ao gerar token LiveKit:', error instanceof Error ? error.message : error);
     res.status(500).json({
       error: 'Falha interna ao gerar o token de conexão com a sala. Verifique a configuração do servidor.',
+      code: 'INTERNAL_ERROR',
     });
   }
 });

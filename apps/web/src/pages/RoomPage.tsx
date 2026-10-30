@@ -10,7 +10,7 @@ import { AudioBanner } from '../components/AudioBanner';
 import { Controls } from '../components/Controls';
 import { useLiveKitRoom } from '../hooks/useLiveKitRoom';
 import { useScreenShare } from '../hooks/useScreenShare';
-import { requestRoomToken, TokenResponse } from '../services/api';
+import { requestRoomToken, TokenResponse, ApiError } from '../services/api';
 import { sanitizeRoomCode } from '../services/roomCode';
 
 export const RoomPage: React.FC = () => {
@@ -105,11 +105,13 @@ export const RoomPage: React.FC = () => {
         setNeedsAuthPrompt(false);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Falha ao autenticar na sala.';
-        const status = (err as { status?: number }).status;
+        const apiErr = err as ApiError;
 
-        // Se for 401 ou erro de autorização, exibe o formulário de senha/chave
-        if (status === 401 || status === 403 || message.includes('autorizado') || message.includes('senha') || message.includes('chave')) {
+        // Solicita senha SOMENTE quando o backend indicar explicitamente requiresAuth === true
+        if (apiErr.requiresAuth === true) {
           setNeedsAuthPrompt(true);
+        } else {
+          setNeedsAuthPrompt(false);
         }
         setTokenError(message);
       } finally {
@@ -142,7 +144,6 @@ export const RoomPage: React.FC = () => {
     const cleanKey = promptPasscode.trim();
     if (!cleanKey) return;
     setPasscode(cleanKey);
-    setNeedsAuthPrompt(false);
     fetchToken(nickname, cleanKey);
   };
 
@@ -261,9 +262,10 @@ export const RoomPage: React.FC = () => {
             <div className="flex items-center gap-3">
               <button
                 type="submit"
-                className="flex-1 py-2.5 px-4 bg-brand-600 hover:bg-brand-500 text-white font-medium text-sm rounded-xl transition-all shadow-lg shadow-brand-600/25"
+                disabled={tokenLoading}
+                className="flex-1 py-2.5 px-4 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-medium text-sm rounded-xl transition-all shadow-lg shadow-brand-600/25 flex items-center justify-center gap-2"
               >
-                Autorizar e Entrar
+                {tokenLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Autorizar e Entrar'}
               </button>
               <button
                 type="button"
@@ -321,7 +323,10 @@ export const RoomPage: React.FC = () => {
           </p>
           <div className="flex items-center gap-3 w-full">
             <button
-              onClick={() => fetchToken(nickname, passcode)}
+              onClick={() => {
+                setTokenError(null);
+                fetchToken(nickname, passcode);
+              }}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-semibold transition-colors"
             >
               <RefreshCw className="w-3.5 h-3.5" /> Tentar Novamente

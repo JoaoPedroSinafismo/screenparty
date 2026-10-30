@@ -12,8 +12,8 @@ Este documento descreve os cenários de teste manuais e o checklist de aceitaç�
 | **02** | Diretório de saída configurado exatamente como `apps/web/dist` | ✅ Validado |
 | **03** | Arquivo `_redirects` com `/* /index.html 200` presente no diretório `dist` | ✅ Validado |
 | **04** | Acesso direto ou recarga (F5) em `/room/:roomId` sem erro 404 | ✅ Validado |
-| **05** | Emissão de tokens protegida: tentativa sem chave ou senha bloqueada com HTTP 401 | ✅ Testado via suite |
-| **06** | Registro de salas (`POST /api/room/create`) com geração de chave HMAC determinística | ✅ Testado via suite |
+| **05** | Emissão de tokens protegida: sala protegida exige senha/chave (HTTP 401); sala pública conecta diretamente | ✅ Testado via suite (13 testes) |
+| **06** | Registro de salas (`POST /api/room/create`) com suporte a salas públicas e protegidas | ✅ Testado via suite |
 | **07** | Link copiado em *"Convidar Amigos"* contém a chave de convite oficial (`?key=...`) | ✅ Validado |
 | **08** | URL do LiveKit Cloud normalizada garantindo `wss://` em produção | ✅ Validado |
 | **09** | Backend recusa inicialização se credenciais forem padrão (`devkey`/`secret`) com `NODE_ENV=production` | ✅ Validado |
@@ -23,6 +23,40 @@ Este documento descreve os cenários de teste manuais e o checklist de aceitaç�
 | **13** | Controle individual de volume e botão mute do espectador preservados | ✅ Validado |
 | **14** | Ajuste de proporção (contain/cover) e tela cheia preservados | ✅ Validado |
 | **15** | Estabilidade de conexão com LiveKit sem loops de reconexão preservada | ✅ Validado |
+| **16** | Resiliência stateless a reinícios do Render gratuito via chaves HMAC assinadas | ✅ Testado via suite |
+| **17** | Proteção contra sobrescrita indevida de salas ativas (409 Conflict) | ✅ Testado via suite |
+
+---
+
+## 2. Cenários de Teste do Sistema de Autenticação de Salas
+
+### Cenário A: Sala criada sem senha (Pública)
+1. Crie uma sala sem preencher o campo de senha.
+2. Acesse a sala pelo código em outra aba.
+3. **Resultado Esperado**: O participante conecta imediatamente, sem exibição de formulário de senha.
+
+### Cenário B: Sala criada com senha (Protegida)
+1. Crie uma sala com uma senha definida.
+2. Acesse a sala sem o link de convite oficial.
+3. **Resultado Esperado**: O backend retorna HTTP 401 (`requiresAuth: true`, `code: AUTH_REQUIRED`) e o frontend exibe o formulário de senha.
+4. Digite a senha correta: a sala autoriza e conecta com sucesso.
+
+### Cenário C: Senha incorreta
+1. Em uma sala protegida, digite uma senha errada no formulário.
+2. **Resultado Esperado**: O backend retorna HTTP 401 (`code: INVALID_CREDENTIALS`). O frontend mantém o formulário aberto e exibe mensagem em destaque: *"Senha de acesso incorreta."*.
+
+### Cenário D: Sala inexistente ou expirada
+1. Tente acessar diretamente um código de sala que não existe (ex: `/room/sp-sala-fantasma-999`).
+2. **Resultado Esperado**: O backend retorna HTTP 404 (`code: ROOM_NOT_FOUND`, `requiresAuth: false`). O frontend exibe a tela de erro *"Sala não encontrada ou expirada"* com opções de voltar ao início ou tentar novamente, sem exibir formulário de senha.
+
+### Cenário E: Falha no backend ou conexão offline
+1. Com o backend temporariamente inativo ou offline, acesse qualquer sala.
+2. **Resultado Esperado**: O frontend exibe mensagem explicativa de conectividade / cold-start do Render, sem exibir formulário de senha.
+
+### Cenário F: Acesso via Link de Convite Oficial (`?key=...`)
+1. Compartilhe o link gerado com chave HMAC.
+2. O convidado clica no link.
+3. **Resultado Esperado**: O participante é admitido imediatamente, mesmo que a sala tenha senha ou o Render tenha reiniciado a memória.
 
 ---
 

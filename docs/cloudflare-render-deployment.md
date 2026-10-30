@@ -113,3 +113,4 @@ Na **V0.3**, nenhuma sala é pública ou acessível apenas por adivinhar seu có
 - [ ] Verifique se o cabeçalho exibe *"Conectado"* com o ponto verde em tempo real.
 - [ ] Clique em *"Convidar Amigos"* e abra o link em uma janela anônima para testar a entrada de espectadores.
 - [ ] Inicie a transmissão de tela com áudio e teste o controle de volume do espectador.
+
