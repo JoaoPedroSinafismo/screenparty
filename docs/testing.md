@@ -1,31 +1,32 @@
-# Roteiro de Testes e Checklist de Aceitação - Etapa 2 (V0.2)
+# Roteiro de Testes e Checklist de Aceitação - Etapa 3 (V0.3 Online)
 
-Este documento descreve os cenários de teste manuais e o checklist de aceitação para validação da **V0.2** do ScreenParty.
+Este documento descreve os cenários de teste manuais e o checklist de aceitação para validação da **V0.3** do ScreenParty.
 
 ---
 
-## 1. Checklist de Aceitação da Etapa 2 (V0.2)
+## 1. Checklist de Aceitação da Etapa 3 (V0.3 Online)
 
 | Item | Critério de Aceitação | Status |
 | :---: | :--- | :---: |
-| **01** | Seletor de qualidade com 720p, 1080p e 1440p disponível no painel de controles | ✅ Implementado |
-| **02** | Seletor de taxa de quadros com 30 FPS e 60 FPS disponível | ✅ Implementado |
-| **03** | Preferências usadas como `ideal/max` sem quebrar chamadas `getDisplayMedia` | ✅ Validado |
-| **04** | Medições reais de `videoTrack.getSettings()` diferenciadas de qualidade desejada | ✅ Validado |
-| **05** | Mudança dinâmica de resolução/FPS via `applyConstraints` sem reiniciar a sala | ✅ Validado |
-| **06** | Controle de volume individual (0 a 100%) no player do espectador | ✅ Implementado |
-| **07** | Botão de silenciar/desmutar (Mute/Unmute) no player do espectador | ✅ Implementado |
-| **08** | Botão de alternar ajuste à tela ("Ajustar" `contain` vs "Preencher" `cover`) | ✅ Implementado |
-| **09** | Botão de tela cheia funcional com saída via tecla `Esc` ou botão | ✅ Implementado |
-| **10** | Ocultação automática de controles do player após 3.5s sem movimento do mouse | ✅ Implementado |
-| **11** | Indicador dinâmico de status: Conectado (verde), Reconectando (amarelo), Desconectado (vermelho) | ✅ Implementado |
-| **12** | Contagem em tempo real de participantes conectados na sala | ✅ Implementado |
-| **13** | Botão de copiar link de convite com confirmação visual imediata | ✅ Implementado |
-| **14** | Instância Room única com sequenciador assíncrono (sem ciclo repetido de reconexão) | ✅ Validado |
+| **01** | Frontend preparado para Cloudflare Pages com build a partir da raiz (`npm run build:web`) | ✅ Validado |
+| **02** | Diretório de saída configurado exatamente como `apps/web/dist` | ✅ Validado |
+| **03** | Arquivo `_redirects` com `/* /index.html 200` presente no diretório `dist` | ✅ Validado |
+| **04** | Acesso direto ou recarga (F5) em `/room/:roomId` sem erro 404 | ✅ Validado |
+| **05** | Emissão de tokens protegida: tentativa sem chave ou senha bloqueada com HTTP 401 | ✅ Testado via suite |
+| **06** | Registro de salas (`POST /api/room/create`) com geração de chave HMAC determinística | ✅ Testado via suite |
+| **07** | Link copiado em *"Convidar Amigos"* contém a chave de convite oficial (`?key=...`) | ✅ Validado |
+| **08** | URL do LiveKit Cloud normalizada garantindo `wss://` em produção | ✅ Validado |
+| **09** | Backend recusa inicialização se credenciais forem padrão (`devkey`/`secret`) com `NODE_ENV=production` | ✅ Validado |
+| **10** | Sem fallback silencioso para `localhost` na build de produção do frontend (`VITE_API_URL` obrigatório) | ✅ Validado |
+| **11** | Tratamento de cold-start do Render e erros de CORS com avisos legíveis em português | ✅ Validado |
+| **12** | Seletor de qualidade (720p, 1080p, 1440p) e FPS (30/60) preservados e operacionais | ✅ Validado |
+| **13** | Controle individual de volume e botão mute do espectador preservados | ✅ Validado |
+| **14** | Ajuste de proporção (contain/cover) e tela cheia preservados | ✅ Validado |
+| **15** | Estabilidade de conexão com LiveKit sem loops de reconexão preservada | ✅ Validado |
 
 ---
 
-## 2. Cenários de Teste Passo a Passo
+## 2. Checklist da V0.2 (Regressão de Recursos)
 
 ### Cenário 1: Seleção de Perfil de Qualidade e Medição Real
 1. Na sala, abra o painel **Qualidade** nos controles inferiores.

@@ -1,10 +1,14 @@
-# Arquitetura do ScreenParty - Etapa 2 (V0.2)
+# Arquitetura do ScreenParty - Etapa 3 (V0.3 Online)
 
 ## 1. Visão Geral
 
 O **ScreenParty** é uma plataforma focada em transmissão e consumo síncrono de tela e áudio entre amigos, com latência sub-segundo via WebRTC e LiveKit SFU (Selective Forwarding Unit).
 
-Na versão **V0.2**, além da fundação de conectividade, foram consolidados os controles de qualidade de vídeo e FPS, controle individual de volume do espectador, modos de ajuste de proporção no player, estados dinâmicos de conexão WebRTC e proteção estrita contra concorrência e loops de ciclo de vida.
+Na versão **V0.3**, a arquitetura foi estendida para suportar operação em nuvem distribuída:
+- **Frontend SPA**: Hospedado no **Cloudflare Pages** com build de monorepo e roteamento dinâmico via `_redirects`.
+- **Backend API**: Publicado no **Render** com HTTPS, validação de autorização de salas e CORS controlado.
+- **Media Engine**: Conectado ao **LiveKit Cloud** com protocolo seguro `wss://`.
+- **Segurança de Acesso**: Proteção por chave de convite determinística (HMAC SHA-256) e senhas opcionais por sala. Nenhuma sala é acessível sem autorização.
 
 ---
 

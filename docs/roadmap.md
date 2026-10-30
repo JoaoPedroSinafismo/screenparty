@@ -33,16 +33,21 @@ Planejamento de evolução técnica e funcional do ScreenParty em etapas increme
 
 ---
 
-## 💬 Etapa 3: Interação Social & Chat em Tempo Real (Planejado)
+## 🌐 Etapa 3: Publicação em Produção & Segurança de Salas (V0.3 - Concluída)
+- [x] Preparação para Cloudflare Pages a partir da raiz do monorepo.
+- [x] Script de build direcionado para `apps/web/dist` (`npm run build:web`).
+- [x] Suporte a SPA routing no Cloudflare Pages com `_redirects` (`/* /index.html 200`) para recarga de `/room/:roomId`.
+- [x] Proteção das salas com chaves de convite criptográficas (HMAC) e senhas personalizadas (sem acesso por adivinhação).
+- [x] Rejeição de credenciais padrão de desenvolvimento (`devkey`/`secret`) em ambiente de produção (`NODE_ENV=production`).
+- [x] Normalização e garantia de protocolo seguro `wss://` para LiveKit Cloud.
+- [x] Sem fallback silencioso para localhost na build de produção do frontend (`VITE_API_URL` obrigatório).
+- [x] Tratamento de cold-start do Render e erros amigáveis de rede e CORS.
+- [x] Documentação completa de publicação no Render e Cloudflare Pages em `docs/cloudflare-render-deployment.md`.
+
+---
+
+## 💬 Etapa 4: Interação Social & Chat em Tempo Real (Planejado)
 - [ ] Chat de texto em tempo real via DataChannels do LiveKit.
 - [ ] Reações flutuantes na tela (emojis animados).
 - [ ] Indicador visual de fala e nível de volume (VU meter).
 - [ ] Suporte a múltiplos apresentadores simultâneos (grade de telas).
-
----
-
-## 🖥️ Etapa 4: Aplicativo Desktop & Captura Nativa de Sistema (Planejado)
-- [ ] Aplicativo Desktop baseado em Electron ou Tauri em `apps/desktop`.
-- [ ] Captura de áudio nativo de dispositivos específicos (WASAPI loopback no Windows).
-- [ ] Modo Picture-in-Picture (PiP) flutuante permanente.
-- [ ] Atalhos globais de teclado (ex: Mudo rápido, Parar transmissão).

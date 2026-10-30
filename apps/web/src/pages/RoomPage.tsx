@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { Loader2, AlertCircle, RefreshCw, ArrowLeft, UserPlus } from 'lucide-react';
+import { Loader2, AlertCircle, RefreshCw, ArrowLeft, UserPlus, KeyRound } from 'lucide-react';
 import { DisconnectReason } from 'livekit-client';
 import { Header } from '../components/Header';
 import { VideoPlayer } from '../components/VideoPlayer';
@@ -19,6 +19,18 @@ export const RoomPage: React.FC = () => {
   const navigate = useNavigate();
 
   const sanitizedRoomId = useMemo(() => (roomId ? sanitizeRoomCode(roomId) : ''), [roomId]);
+
+  // Extrai chave de convite ou senha da URL e do router state
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const urlPasscode = searchParams.get('key') || searchParams.get('passcode') || '';
+
+  const [passcode, setPasscode] = useState<string>(() => {
+    const fromState = (location.state as { passcode?: string })?.passcode;
+    return fromState || urlPasscode || '';
+  });
+
+  const [promptPasscode, setPromptPasscode] = useState<string>('');
+  const [needsAuthPrompt, setNeedsAuthPrompt] = useState<boolean>(false);
 
   // Identificação do participante
   const [nickname, setNickname] = useState<string>(() => {
@@ -74,34 +86,45 @@ export const RoomPage: React.FC = () => {
     onDisconnected: handleDisconnected,
   });
 
-  // Função para buscar token do backend
-  const fetchToken = useCallback(async (nickToUse: string) => {
-    if (!sanitizedRoomId) return;
+  // Função para buscar token do backend com suporte a autorização
+  const fetchToken = useCallback(
+    async (nickToUse: string, passcodeToUse?: string) => {
+      if (!sanitizedRoomId) return;
 
-    setTokenLoading(true);
-    setTokenError(null);
+      setTokenLoading(true);
+      setTokenError(null);
 
-    try {
-      const response = await requestRoomToken({
-        roomName: sanitizedRoomId,
-        identity,
-        name: nickToUse,
-      });
-      setTokenData(response);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Falha ao autenticar na sala.';
-      setTokenError(message);
-    } finally {
-      setTokenLoading(false);
-    }
-  }, [sanitizedRoomId, identity]);
+      try {
+        const response = await requestRoomToken({
+          roomName: sanitizedRoomId,
+          identity,
+          name: nickToUse,
+          passcode: passcodeToUse || passcode || undefined,
+        });
+        setTokenData(response);
+        setNeedsAuthPrompt(false);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Falha ao autenticar na sala.';
+        const status = (err as { status?: number }).status;
+
+        // Se for 401 ou erro de autorização, exibe o formulário de senha/chave
+        if (status === 401 || status === 403 || message.includes('autorizado') || message.includes('senha') || message.includes('chave')) {
+          setNeedsAuthPrompt(true);
+        }
+        setTokenError(message);
+      } finally {
+        setTokenLoading(false);
+      }
+    },
+    [sanitizedRoomId, identity, passcode]
+  );
 
   // Dispara busca do token assim que tiver apelido e roomId
   useEffect(() => {
-    if (nickname && sanitizedRoomId && !tokenData && !tokenLoading && !tokenError) {
-      fetchToken(nickname);
+    if (nickname && sanitizedRoomId && !tokenData && !tokenLoading && !tokenError && !needsAuthPrompt) {
+      fetchToken(nickname, passcode);
     }
-  }, [nickname, sanitizedRoomId, tokenData, tokenLoading, tokenError, fetchToken]);
+  }, [nickname, sanitizedRoomId, tokenData, tokenLoading, tokenError, needsAuthPrompt, passcode, fetchToken]);
 
   // Tratamento de envio de apelido se entrou via link direto sem apelido prévio
   const handleSetNickname = (e: React.FormEvent) => {
@@ -110,7 +133,17 @@ export const RoomPage: React.FC = () => {
     if (!cleanNick) return;
     localStorage.setItem('screenparty_nickname', cleanNick);
     setNickname(cleanNick);
-    fetchToken(cleanNick);
+    fetchToken(cleanNick, passcode);
+  };
+
+  // Tratamento de envio de senha/chave de acesso caso a sala requeira autorização
+  const handleSetPasscode = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanKey = promptPasscode.trim();
+    if (!cleanKey) return;
+    setPasscode(cleanKey);
+    setNeedsAuthPrompt(false);
+    fetchToken(nickname, cleanKey);
   };
 
   // Iniciar compartilhamento de tela
@@ -188,6 +221,64 @@ export const RoomPage: React.FC = () => {
     );
   }
 
+  // Se a sala requerer autorização (chave de convite ou senha)
+  if (needsAuthPrompt) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <div className="bg-surface max-w-md w-full rounded-2xl border border-surface-border p-6 shadow-2xl">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
+              <KeyRound className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-white">Autorização da Sala</h2>
+              <p className="text-xs text-gray-400">A sala {sanitizedRoomId} requer senha ou chave de convite</p>
+            </div>
+          </div>
+
+          {tokenError && (
+            <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs rounded-xl">
+              {tokenError}
+            </div>
+          )}
+
+          <form onSubmit={handleSetPasscode} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-300 mb-1">
+                Senha ou Chave de Convite
+              </label>
+              <input
+                type="password"
+                autoFocus
+                required
+                value={promptPasscode}
+                onChange={(e) => setPromptPasscode(e.target.value)}
+                placeholder="Digite a senha ou cole a chave de convite"
+                className="w-full bg-surface-elevated border border-surface-border rounded-xl px-3.5 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
+              />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="submit"
+                className="flex-1 py-2.5 px-4 bg-brand-600 hover:bg-brand-500 text-white font-medium text-sm rounded-xl transition-all shadow-lg shadow-brand-600/25"
+              >
+                Autorizar e Entrar
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/')}
+                className="px-4 py-2.5 bg-surface-elevated hover:bg-surface-border text-gray-300 text-sm font-medium rounded-xl border border-surface-border transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   // Estado de Carregamento inicial do Token
   if (tokenLoading || (livekit.isConnecting && !livekit.error)) {
     return (
@@ -200,7 +291,7 @@ export const RoomPage: React.FC = () => {
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
           <Loader2 className="w-10 h-10 text-brand-500 animate-spin mb-4" />
           <h2 className="text-base font-semibold text-white mb-1">
-            {tokenLoading ? 'Autenticando na sala...' : 'Conectando ao LiveKit...'}
+            {tokenLoading ? 'Autenticando na sala...' : 'Conectando ao LiveKit Cloud...'}
           </h2>
           <p className="text-xs text-gray-400 max-w-sm">
             Estabelecendo canais seguros de áudio e vídeo de baixa latência para {sanitizedRoomId}.
@@ -230,7 +321,7 @@ export const RoomPage: React.FC = () => {
           </p>
           <div className="flex items-center gap-3 w-full">
             <button
-              onClick={() => fetchToken(nickname)}
+              onClick={() => fetchToken(nickname, passcode)}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-semibold transition-colors"
             >
               <RefreshCw className="w-3.5 h-3.5" /> Tentar Novamente

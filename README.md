@@ -1,4 +1,4 @@
-# ScreenParty (Etapa 2 - V0.2)
+# ScreenParty (Etapa 3 - V0.3 Online)
 
 > Plataforma web de compartilhamento de tela e áudio em tempo real de baixa latência para amigos, desenvolvida com React, TypeScript, Express e LiveKit.
 
@@ -6,10 +6,11 @@
 
 ## 📋 Sumário
 - [Visão Geral](#-visão-geral)
-- [Novidades da V0.2](#-novidades-da-v02)
+- [Novidades da V0.3](#-novidades-da-v03)
+- [Publicação em Produção (Cloudflare Pages + Render)](#-publicação-em-produção-cloudflare-pages--render)
 - [Arquitetura & Stack](#-arquitetura--stack)
 - [Pré-requisitos](#-pré-requisitos)
-- [Passo a Passo de Instalação e Execução](#-passo-a-passo-de-instalação-e-execução)
+- [Passo a Passo de Instalação e Execução Local](#-passo-a-passo-de-instalação-e-execução-local)
 - [Como Iniciar o Servidor LiveKit no Windows](#-como-iniciar-o-servidor-livekit-no-windows)
 - [Variáveis de Ambiente](#-variáveis-de-ambiente)
 - [Como Testar Localmente (Duas Abas / Navegadores)](#-como-testar-localmente-duas-abas--navegadores)
@@ -21,15 +22,31 @@
 ---
 
 ## 🚀 Visão Geral
-O **ScreenParty** permite compartilhar telas e áudio de alta qualidade entre amigos diretamente pelo navegador.
+O **ScreenParty** permite compartilhar telas e áudio de alta qualidade entre amigos diretamente pelo navegador, com baixa latência WebRTC.
 
-### 🌟 Novidades da V0.2
-- **Controles de Qualidade**: Perfis selecionáveis de resolução (`720p`, `1080p`, `1440p`) e taxa de quadros (`30 FPS` e `60 FPS`) com aplicação dinâmica via `applyConstraints` sem reiniciar a sala.
-- **Medição Real vs Solicitada**: Inspeção de `track.getSettings()` diferenciando a qualidade desejada da resolução e FPS efetivamente capturados pelo hardware/navegador.
-- **Controle de Áudio do Espectador**: Controle deslizante individual de volume (0 a 100%) e botão de silenciar/desmutar (Mute/Unmute), sem alterar o volume original da transmissão.
-- **Aprimoramentos do Player**: Alternância de modo de ajuste de proporção ("Ajustar" `contain` vs "Preencher" `cover`), tela cheia nativa e auto-ocultação de controles após inatividade do cursor.
-- **Indicadores em Tempo Real**: Status de conexão WebSocket/WebRTC (Conectado, Reconectando, Desconectado) e contagem real de participantes.
-- **Estabilidade Avançada**: Sequenciador assíncrono para o ciclo de vida da sala LiveKit, prevenindo colisões de identidade (`DUPLICATE_IDENTITY`) e loops de reconexão.
+### 🌟 Novidades da V0.3
+- **Pronto para Produção**: Frontend preparado para **Cloudflare Pages** a partir da raiz do monorepo e backend publicado no **Render**.
+- **SPA Routing com `_redirects`**: Suporte para atualizar ou abrir diretamente rotas como `/room/:roomId` sem erro 404 no Cloudflare Pages.
+- **Salas Protegidas e Chaves de Convite**: Nenhuma sala é acessível apenas pelo nome. Cada sala gera uma chave de convite criptográfica exclusiva (HMAC SHA-256) com suporte a senha de proteção.
+- **Zero Fallback Silencioso em Produção**: O frontend exige `VITE_API_URL` apontando para o Render (`https://.../api`), impedindo chamadas acidentais a localhost após deploy.
+- **Protocolo `wss://` Garantido**: Validação e normalização de URL para LiveKit Cloud.
+- **Bloqueio de Credenciais Fracas em Produção**: O backend recusa inicializar com `devkey`/`secret` caso `NODE_ENV=production`.
+- **Tratamento de Cold-Start do Render**: Mensagens orientativas para os usuários caso a instância gratuita do Render esteja acordando.
+
+---
+
+## ☁️ Publicação em Produção (Cloudflare Pages + Render)
+Para instruções detalhadas de deploy, consulte o [Guia de Publicação em Produção (docs/cloudflare-render-deployment.md)](docs/cloudflare-render-deployment.md).
+
+- **Cloudflare Pages**:
+  - Build command: `npm run build:web`
+  - Root directory: `/`
+  - Output directory: `apps/web/dist`
+  - Variable: `VITE_API_URL=https://sua-api.onrender.com/api`
+- **Render Web Service**:
+  - Build command: `npm run build:server`
+  - Start command: `npm run start -w @screenparty/server`
+  - Variables: `NODE_ENV=production`, `CORS_ORIGIN=https://screenparty.pages.dev`, `LIVEKIT_URL=wss://...`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`
 
 ---
 
